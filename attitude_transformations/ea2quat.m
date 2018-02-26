@@ -29,6 +29,6 @@ quat = [s1o2*c2o2*c3o2 + c1o2*s2o2*s3o2;
         c1o2*c2o2*s3o2 + s1o2*s2o2*c3o2;
         s1o2*s2o2*s3o2 - c1o2*c2o2*c3o2];
 
-quat = sign(quat(4)) * quat/norm(quat);
+quat = quat/norm(quat);
 
 end
