@@ -20,8 +20,6 @@ function [ secGMST ] = SecGMST( T0, hour, min, sec )
 %
 %   secGMST = {scalar, numeric} Greenwich Mean Sidereal Time in seconds
 %
-% NOTE: This function does not account for leap seconds.
-%
 % REFERENCE: Markley, F. Landis, and John L. Crassidis. Fundamentals of 
 %       spacecraft attitude determination and control. Vol. 33. New York: 
 %       Springer, 2014. Pg 34. Eq 2.70.

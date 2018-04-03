@@ -11,7 +11,7 @@ for i = 1:size(charList,1)
     
     if (~isequal(item,'.') && ~isequal(item,'..') && ~isequal(item,'.git'))
         if exist(item,'dir') == 7
-            addpath(item);
+            addpath([newDir filesep item]);
         end
     end
 end

@@ -16,18 +16,36 @@ function quat = CTM2quat(CTM)
 %
 %
 
-quat = zeros(4,1);
+trCTM = trace(CTM);
 
-quat(4) = 0.5 * sqrt(1 + trace(CTM));
+% idx determines method that minimizes numerical error
+[~, idx] = max([CTM(1,1), CTM(2,2), CTM(3,3), trCTM]);
 
-quat(1) = sign(CTM(3,2) - CTM(2,3)) * 0.5 * ...
-    sqrt(1 + CTM(1,1) - CTM(2,2) - CTM(3,3));
+if idx == 1
+    qIdxQuat = 0.25*[1 + 2*CTM(1,1) - trCTM;
+                        CTM(1,2) + CTM(2,1);
+                        CTM(1,3) + CTM(3,1);
+                        CTM(2,3) - CTM(3,2)];
+elseif idx == 2
+    qIdxQuat = 0.25*[   CTM(2,1) + CTM(1,2);
+                     1 + 2*CTM(2,2) - trCTM;
+                        CTM(2,3) + CTM(3,2);
+                        CTM(3,1) - CTM(1,3)];
+elseif idx == 3
+    qIdxQuat = 0.25*[   CTM(3,1) + CTM(1,3);
+                        CTM(3,2) + CTM(2,3);
+                     1 + 2*CTM(3,3) - trCTM;
+                        CTM(1,2) - CTM(2,1)];
+else
+    qIdxQuat = 0.25*[CTM(2,3) - CTM(3,2);
+                     CTM(3,1) - CTM(1,3);
+                     CTM(1,2) - CTM(2,1);
+                               1 + trCTM];
+end
 
-quat(2) = sign(CTM(1,3) - CTM(3,1)) * 0.5 * ...
-    sqrt(1 - CTM(1,1) + CTM(2,2) - CTM(3,3));
+qIdx = sqrt(qIdxQuat(idx));
 
-quat(3) = sign(CTM(2,1) - CTM(1,2)) * 0.5 * ...
-    sqrt(1 - CTM(1,1) - CTM(2,2) + CTM(3,3));
+quat = qIdxQuat/qIdx;
 
 quat = quat/norm(quat);
 

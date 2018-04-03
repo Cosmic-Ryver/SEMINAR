@@ -18,25 +18,6 @@ function ea = quat2ea(quat)
 %
 
 
-q1 = quat(1);
-q2 = quat(2);
-q3 = quat(3);
-q4 = quat(4);
-q2Sqr = q2^2;
-
-ea = zeros(3,1);
-
-ea(2) = asin(2*q1*q3 - 2*q4*q2);
-
-if abs(ea(2) - pi/2) < 1e-15     % singularity @ pitch = pi/2
-    ea(1) = 0;
-    ea(3) = -2 * atan2(q1,q4);
-elseif abs(ea(2) + pi/2) < 1e-15 % singularity @ pitch = -pi/2
-    ea(1) = 0;
-    ea(3) = 2 * atan2(q1,q4);
-else                             % no singularity
-    ea(1) = atan2(-2*q2*q3 - 2*q4*q1, 1 - 2*q1^2 - 2*q2Sqr);
-    ea(3) = atan2(-2*q1*q2 - 2*q4*q3, 1 - 2*q2Sqr - 2*q3^2);
-end
+ea = CTM2ea(quat2CTM(quat));
 
 end

@@ -17,18 +17,6 @@ function quat = ea2quat(ea)
 %
 %
 
-s1o2 = sin(ea(1)/2);
-s2o2 = sin(ea(2)/2);
-s3o2 = sin(ea(3)/2);
-c1o2 = cos(ea(1)/2);
-c2o2 = cos(ea(2)/2);
-c3o2 = cos(ea(3)/2);
-
-quat = [s1o2*c2o2*c3o2 + c1o2*s2o2*s3o2;
-        c1o2*s2o2*c3o2 - s1o2*c2o2*s3o2;
-        c1o2*c2o2*s3o2 + s1o2*s2o2*c3o2;
-        s1o2*s2o2*s3o2 - c1o2*c2o2*c3o2];
-
-quat = quat/norm(quat);
+quat = CTM2quat(ea2CTM(ea));
 
 end

@@ -26,6 +26,16 @@ function [ r ] = LLA2ECEF( lat, long, alt, rE )
 %
 %
 
+% allow for input as a vector
+if nargin == 2
+    LLA = lat;
+    rE  = long;
+    
+    lat  = LLA(1);
+    long = LLA(2);
+    alt  = LLA(3);
+end
+
 % Preallocate
 r = zeros(3,1);
 

@@ -1,6 +1,6 @@
-function [ T ] = ECEF2GCI( jd, varargin )
-% ECEF2GCI calculate the CTM for transformations from the ECEF frame to the 
-%   GCI frame
+function [ T ] = ECEF2ECI( jd, varargin )
+% ECEF2ECI calculate the CTM for transformations from the ECEF frame to the 
+%   ECI frame
 %
 % Gus Buonviri, 2/25/18
 % Mississippi State University
@@ -27,7 +27,7 @@ function [ T ] = ECEF2GCI( jd, varargin )
 %
 %   T = [3 x 3] {array, numeric} coordinate transformation matrix for the
 %       transformation from the Earth-Centered/Earth-Fixed frame to the 
-%       Geocentric Inertial frame.
+%       Earth Centered Inertial frame.
 %
 % NOTE: This function and underlying fuctions do not account for leap
 %   seconds.
@@ -40,6 +40,6 @@ function [ T ] = ECEF2GCI( jd, varargin )
 
 % CTM is the inverse/transpose (one in the same because CTM's are
 %   orthogonal) of that for the GCI2ECEF transformation
-T = GCI2ECEF(jd, varargin{:})';
+T = ECI2ECEF(jd, varargin{:})';
 
 end

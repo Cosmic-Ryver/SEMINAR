@@ -29,13 +29,18 @@ function [ lat, long, alt ] = ECEF2LLA( r, rE )
 % Position vector magnitude
 rMag = norm(r);
 
-% Longitude
-long = atan2(r(2),r(1));
-
 % Latitude
 lat  = asin(r(3)/rMag);
 
+% Longitude
+long = atan2(r(2),r(1));
+
 % Altitude
 alt  = rMag - rE;
+
+% Allow output as a vector
+if nargout == 1
+    lat = [lat; long; alt];
+end
 
 end

@@ -15,7 +15,20 @@ function ea = CTM2ea(CTM)
 %       in radians. Order is roll-pitch-yaw.
 %
 
-% Converting to quaternion eliminates singularity at ea = +/-(pi/2)
-ea = quat2ea(CTM2quat(CTM));
+ea = zeros(3,1);
+
+ea(2) = asin(-CTM(1,3));
+
+if abs(ea(2) - pi/2) < 1e-15     % singularity @ pitch = pi/2
+    ea(1) = 0;
+    ea(3) = atan2(-CTM(3,2) - CTM(2,1), CTM(2,2) - CTM(3,1));
+elseif abs(ea(2) + pi/2) < 1e-15 % singularity @ pitch = -pi/2
+    ea(1) = 0;
+    ea(3) = atan2(CTM(3,2) - CTM(2,1), CTM(2,2) + CTM(3,1));
+else                             % no singularity
+    signC2 = sign(cos(ea(2)));
+    ea(1)  = atan2(signC2*CTM(2,3), signC2*CTM(3,3));
+    ea(3)  = atan2(signC2*CTM(1,2), signC2*CTM(1,1));
+end;
 
 end

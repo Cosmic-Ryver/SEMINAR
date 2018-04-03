@@ -28,8 +28,6 @@ function [ thetaGMST ] = ThetaGMST( jd, varargin )
 %   thetaGMST = {scalar, numeric} Greenwich Mean Sidereal Time angle in
 %       randians.
 %
-% NOTE: This function does not account for leap seconds.
-%
 % REFERENCE: Markley, F. Landis, and John L. Crassidis. Fundamentals of 
 %       spacecraft attitude determination and control. Vol. 33. New York: 
 %       Springer, 2014. Pg 33-34. Eq 2.69.

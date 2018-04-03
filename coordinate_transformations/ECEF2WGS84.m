@@ -50,7 +50,7 @@ qSqrt = sqrt(q);
 
 % 2.77c
 u = p / qSqrt;
-uSqr = u^2
+uSqr = u^2;
 v = bSqr * uSqr / q;
 P = 27 * v * s/q;
 Q = (sqrt(P + 1) + sqrt(P))^(2/3);

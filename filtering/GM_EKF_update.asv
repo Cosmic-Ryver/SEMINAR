@@ -1,0 +1,34 @@
+function [ mm, Pm ] = G_EKF_update( m, P, Q, f, Fx, Fq )
+% GM_EKF_prediction Prediction step for the first order extended Kalman 
+%   filter for noon-additive noise processes
+%
+% Gus Buonviri, 3/6/18
+% Mississippi State University
+%
+% INPUTS:
+%
+%   m = [nX x 1] {column vector, numeric} Gaussian mean, where nX is the
+%       length of a state vector.
+%
+%   P = [nX x nX] {array, numeric} Gaussian covariance matrix.
+%
+%   Q = [nX x nX] {array, numeric} Process noise covariance.
+%
+%   f = [1 x 1] {scalar, function handle} non-linear dynamics model
+%
+% OUTPUTS:
+%
+%
+%
+%
+
+% Update Gaussian mean
+mm  = f(m);
+
+% Update Gaussian covariance
+Fxm = Fx(m); % Jacobian of the non-linear dynamics w.r.t. x
+Fqm = Fq(m); % Jacobian of the non-linear dynamics w.r.t. q
+Pm  = Fxm * P * Fxm' + Fqm * Q * Fqm';
+
+end
+

@@ -16,20 +16,19 @@ function CTM = quat2CTM(quat)
 %
 %
 
-x2q1p2 = 2 * quat(1)^2;
-x2q2p2 = 2 * quat(2)^2;
-x2q3p2 = 2 * quat(3)^2;
 x2q1q2 = 2 * quat(1) * quat(2);
 x2q1q3 = 2 * quat(1) * quat(3);
 x2q2q3 = 2 * quat(2) * quat(3);
-x2q4q1 = 2 * quat(4) * quat(1);
-x2q4q2 = 2 * quat(4) * quat(2);
-x2q4q3 = 2 * quat(4) * quat(3);
+x2q1q4 = 2 * quat(4) * quat(1);
+x2q2q4 = 2 * quat(4) * quat(2);
+x2q3q4 = 2 * quat(4) * quat(3);
+q1p2   = quat(1)^2;
+q2p2   = quat(2)^2;
+q3p2   = quat(3)^2;
+q4p2   = quat(4)^2;
 
-CTM = [1 - x2q2p2 - x2q3p2,     x2q1q2 - x2q4q3,     x2q1q3 + x2q4q2;
-           x2q1q2 + x2q4q3, 1 - x2q1p2 - x2q3p2,     x2q2q3 - x2q4q1;
-           x2q1q3 - x2q4q2,     x2q2q3 + x2q4q1, 1 - x2q1p2 - x2q2p2];
-
-CTM(abs(CTM)<1e-15) = 0;
+CTM = [q1p2-q2p2-q3p2+q4p2,      x2q1q2 + x2q3q4,      x2q1q3 - x2q2q4;
+           x2q1q2 - x2q3q4, -q1p2+q2p2-q3p2+q4p2,      x2q2q3 + x2q1q4;
+           x2q1q3 + x2q2q4,      x2q2q3 - x2q1q4, -q1p2-q2p2+q3p2+q4p2];
        
 end

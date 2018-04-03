@@ -1,5 +1,5 @@
-function [ jd ] = JulianDate( year, month, day, hour, min, sec )
-% JulianDate calculate Julian date from Gregorian calendar date
+function [ jd ] = GregDate2JD( year, month, day, hour, min, sec )
+% GregDate2JD calculate Julian date from Gregorian calendar date
 %
 % Gus Buonviri, 2/18/2018
 % Mississippi State University
@@ -23,8 +23,6 @@ function [ jd ] = JulianDate( year, month, day, hour, min, sec )
 %   jd = {scalar, numeric} Julian date corresponding to input Gregorian
 %       calendar date.
 %
-% NOTE: This function does not account for leap seconds.
-%
 % REFERENCE:
 %
 %   Vallado, David A. Fundamentals of astrodynamics and applications. Vol. 
@@ -32,11 +30,24 @@ function [ jd ] = JulianDate( year, month, day, hour, min, sec )
 %
 %
 
+% deal with leap seconds
+YMDls = getLeapSecData();
+secPerDay = 60;
+yearChk = YMDls(:,1) == year;
+if any(yearChk)
+    if YMDls(yearChk,2) == month
+        if YMDls(yearChk,3) == day
+            secPerDay = 61;
+        end
+    end
+end
+
+% get Julian Date
 jd = 367*year...
     -floor(7 * (year + floor((month + 9)/12))/4)...
     +floor(275 * month/9)...
     +day...
     +1721013.5...
-    +((sec/60 + min)/60 + hour)/24;
+    +((sec/secPerDay + min)/60 + hour)/24;
 
 end

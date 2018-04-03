@@ -26,10 +26,10 @@ s1c3 = s1*c3;
 c1s3 = c1*s3;
 s1s3 = s1*s3;
 c1c3 = c1*c3;
-
-CTM = [ c2*c3, c1s3 + s1c3*s2, s1s3 - c1c3*s2;
-       -c2*s3, c1c3 - s1s3*s2, s1c3 + c1s3*s2;
-           s2,         -s1*c2,          c1*c2];
+       
+CTM = [         c2*c3,          c2*s3,   -s2;
+       s1c3*s2 - c1s3, s1s3*s2 + c1c3, s1*c2;
+       c1c3*s2 + s1s3, c1s3*s2 - s1c3, c1*c2];
 
 CTM(abs(CTM)<1e-15) = 0;
 
