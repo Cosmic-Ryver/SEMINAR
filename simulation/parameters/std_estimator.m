@@ -1,4 +1,4 @@
-function [ estimator ] = test_estimator()
+function [ estimator ] = std_estimator()
 %% Initial conditions
 
 % preallocate
@@ -146,27 +146,33 @@ end
 
 function [ estimator ] = propagate_estimate(estimator,F,G,Q)
 
-tspan = [0 estimator.sensors.base_frequency];
+tspan  = [0 estimator.sensors.base_frequency];
 q_est  = estimator.estimate.state(7:10);
 om_est = estimator.estimate.state(11:13);
-opts1  = odeset('RelTol',1e-8,'AbsTol',1e-10);
-opts2  = odeset('RelTol',1e-15,'AbsTol',1e-17);
+dim    = length(G);
+Pr     = @(p) reshape(p,dim,dim);
+P      = estimator.estimate.uncertainty;
+Xn     = cell(2,1);
 
-[ ~, X ] = ode45(@(t, x, om) 0.5*quat_prod([om; 0],x/norm(x)), ...
-    tspan, q_est, opts1, om_est);
-estimator.estimate.state(7:10) = X(end,:)'/norm(X(end,:));
+for i = 1:2
+    if i == 1
+        opts  = odeset('RelTol',1e-8,'AbsTol',1e-10);
+        [ ~, X ] = ode45(@(t, x, om) 0.5*quat_prod([om; 0],x/norm(x)), ...
+            tspan, q_est, opts, om_est);
+        Xn{i} = X;
+    else
+        rP = @(P) reshape(P,dim^2,1);
+        P_est = rP(P);
+        opts   = odeset('RelTol',1e-10,'AbsTol',1e-13);
+        [~,X] = ode45(@(t,x,om) rP(F(om)*Pr(x) + Pr(x)*F(om)' + G*Q*G'),...
+                tspan,P_est,opts,om_est);
+        Xn{i} = X;
+    end
+end
 
-dim = length(G);
+estimator.estimate.state(7:10) = Xn{1}(end,:)'/norm(Xn{1}(end,:));
+estimator.estimate.uncertainty = Pr(Xn{2}(end,:)');
 
-Pr = @(p) reshape(p,dim,dim);
-
-rP = @(P) reshape(P,dim^2,1);
-
-P_est = rP(estimator.estimate.uncertainty);
-
-[~,X] = ode45(@(t,x,om) rP(F(om)*Pr(x) + Pr(x)*F(om)' + G*Q*G'),...
-        tspan,P_est,opts2,om_est);
-estimator.estimate.uncertainty = Pr(X(end,:)');
 
 end
 

@@ -1,4 +1,4 @@
-function [ engine ] = test_kin_dyn_engine()
+function [ engine ] = std_kin_dyn_engine()
 %% Force funcs
 
 % solar radiation pressure

@@ -42,58 +42,67 @@ function [ dxdt ] = kin_dyn_superposition( t, x, m, J, L_int, ...
 %   dxdt = [nX x 1] {column vector, numeric} state vector time derivative.
 %
 
-% preallocate
-F     = zeros(3,1);
-L_ext = zeros(3,1);
-dxdt  = zeros(length(x),1);
-
 % enforce unit quaternion
 x(7:10) = x(7:10)/norm(x(7:10));
 
 % allow for common arguments
 if length(force_args) == 1
-    isArgsCommon = true;
+    isFArgsCommon = true;
 else
-    isArgsCommon = false;
+    isFArgsCommon = false;
+end
+
+% allow for common arguments
+if length(kin_dyn_args) == 1
+    isKDArgsCommon = true;
+else
+    isKDArgsCommon = false;
 end
 
 % get forces and external torques
-N = length(force_funcs);
-for i = 1:N
-    funci    = force_funcs{i};
-    if isArgsCommon
-        argsi = force_args{1};
-    else
-        argsi    = force_args{i};
+N1 = length(force_funcs);
+N2 = length(kin_dyn_funcs);
+funcs = { force_funcs{:}, kin_dyn_funcs{:} };
+args  = { force_args{:}, kin_dyn_args{:} };
+N12 = N1 + N2;
+Fn = zeros(3,N12);
+Ln = zeros(3,N12);
+dxdtn = zeros(length(x),N12);
+for i = 1 : N12
+    if i <= N1
+        funci    = funcs{i};
+        if isFArgsCommon
+            argsi = args{1};
+        else
+            argsi    = args{i};
+        end
+        [Fi, Li] = funci(t,x,argsi{:});
+        Fn(:,i)    = Fi;
+        Ln(:,i)    = Li;
+    elseif i > N1
+        funci = funcs{i};
+        if isKDArgsCommon
+            if isFArgsCommon
+                argsi = args{2};
+            else
+                argsi = args{1 + N1};                
+            end
+        else
+            argsi = args{i};
+        end
+        dxdti = funci(t,x,argsi{:});
+        dxdtn(:,i) = dxdti;
     end
-    [Fi, Li] = funci(t,x,argsi{:});
-    F        = F + Fi;
-    L_ext    = L_ext + Li;
 end
+
+% sum results of parfor
+F     = sum(Fn,2);
+L_ext = sum(Ln,2);
+dxdt  = sum(dxdtn,2);
 
 % apply forces and torques
 dxdt(4:6) = dxdt(4:6) + F/m;
 dxdt      = dxdt      + attitude_kin_dyn(t,x,J,L_int,L_ext);
-
-% allow for common arguments
-if length(kin_dyn_args) == 1
-    isArgsCommon = true;
-else
-    isArgsCommon = false;
-end
-
-% apply other kinematics and dynamics
-N = length(kin_dyn_funcs);
-for i = 1:N
-    funci = kin_dyn_funcs{i};
-    if isArgsCommon
-        argsi = kin_dyn_args{1};
-    else
-        argsi = kin_dyn_args{i};
-    end
-    dxdti = funci(t,x,argsi{:});
-    dxdt  = dxdt + dxdti;
-end
 
 end
 
