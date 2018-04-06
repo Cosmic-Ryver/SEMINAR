@@ -36,16 +36,22 @@ function [ dxdt ] = attitude_kin_dyn( t, x, J, L_int_w, L_ext )
 dxdt = zeros(length(x),1);
 
 % Get number of reaction wheels
-nW = size(L_int_w,2);
+nW = (length(x) - 13)/3;
 
-% Wheel momentum rates of change
-dxdt(14:end) = reshape(L_int_w,3*nW,1);
+if nW > 0
+    % Wheel momentum rates of change
+    dxdt(14:end) = reshape(L_int_w,3*nW,1);
 
-% Total current wheel momentum
-H = sum(reshape(x(14:end),3,nW), 2);
-
-% Total current internal torque
-L_int = sum(L_int_w, 2);
+    % Total current wheel momentum
+    H = sum(reshape(x(14:end),3,nW), 2);
+    
+    % Total current internal torque
+    L_int = sum(L_int_w, 2);
+else
+    % No wheels = no momentum or internal torques
+    H     = zeros(3,1);
+    L_int = zeros(3,1);
+end
 
 % Angular acceleration
 dxdt(11:13) = J\(L_ext - L_int - cross(x(11:13), J*x(11:13) + H));

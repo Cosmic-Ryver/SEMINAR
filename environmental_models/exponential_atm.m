@@ -29,7 +29,6 @@ if h < 0
     error('Position below Earth'' surface')
 end
 
-
 % find reference height
 idx = 1;
 while true

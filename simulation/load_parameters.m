@@ -42,10 +42,11 @@ switch param_type
         params.v         = v;
     case 'environment'
         run(param_script)
-        params.muE    = muE;
-        params.muMoon = muMoon;
-        params.rE     = rE;
-        params.update = update;
+        params.muE              = muE;
+        params.muMoon           = muMoon;
+        params.rE               = rE;
+        params.update           = update;
+        params.update_frequency = update_frequency;
     case 'simulation'
         run(param_script)
         params.ti      = ti;

@@ -7,7 +7,10 @@ if isempty(YMDint) % check persistent variables
 
     thisDir         = fileparts(which('getLeapSecData.m'));
     leapSecDataPath = [thisDir filesep 'data' filesep 'LeapSec.mat'];
-    if exist(leapSecDataPath,'file') == 7
+    if ~(exist(fileparts(leapSecDataPath),'dir') == 7)
+        mkdir(fileparts(leapSecDataPath));
+    end
+    if exist(leapSecDataPath,'file') == 2
         load(leapSecDataPath);
         [ty, tm, ~, ~, ~, ~] = datevec(now);
         if tm > 6

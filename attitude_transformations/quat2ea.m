@@ -17,7 +17,6 @@ function ea = quat2ea(quat)
 %
 %
 
-
 ea = CTM2ea(quat2CTM(quat));
 
 end

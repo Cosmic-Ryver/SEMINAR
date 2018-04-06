@@ -43,8 +43,11 @@ tv = ti:dt:te;
 N  = length(tv);
 N_data = params.simulation.N_data;
 
+% determine number of reaction wheels
+nw = size(controller.actuators.rwheels.initial_momentum,2);
+
 % preallocate
-x          = zeros(16,N_data);
+x          = zeros(13 + nw*3,N_data);
 x_est      = zeros(13,N_data);
 beta_truth = zeros(3,N_data);
 beta_est   = zeros(3,N_data);
@@ -52,7 +55,6 @@ L_ctr      = zeros(3,N_data);
 qy1        = zeros(4,N_data);
 qy2        = zeros(4,N_data);
 omy        = zeros(3,N_data);
-L_int      = zeros(3,N_data);
 nP         = length(estimator.estimate.uncertainty);
 P          = zeros(nP,nP,N_data);
 q_c        = zeros(4,N_data);
@@ -62,7 +64,10 @@ x(1:3,1)        = params.orbital.r;
 x(4:6,1)        = params.orbital.v;
 x(7:10,1)       = estimator.truth.state(7:10);
 x(11:13,1)      = estimator.truth.state(11:13);
-x(14:16,1)      = [0;0;0];
+for i = 1:nw
+    x((14 + (i-1)*3):(13 + i*3)) = ...
+        controller.actuators.rwheels.initial_momentum(:,i);
+end
 x_est(7:10,1)   = estimator.estimate.state(7:10);
 x_est(11:13,1)  = estimator.estimate.state(11:13);
 beta_truth(:,1) = estimator.truth.error;
@@ -107,7 +112,13 @@ for i = 2:N
     % update estimate
     estimator = estimator.estimate.update(estimator, t);
     
-    % lowest frequency events
+    % environment update frequency
+    if mod(t,params.environment.update_frequency) == 0
+        %update environment
+        params = params.environment.update(t, x1, params);
+    end
+    
+    % data sampling frequency
     if mod(t,params.simulation.dt_data) == 0
         % store date
         idx = (t - tv(1))/params.simulation.dt_data + 1;
@@ -117,16 +128,12 @@ for i = 2:N
         beta_truth(:,idx) = estimator.truth.error;
         beta_est(:,idx) = estimator.estimate.error;
         P(:,:,idx) = estimator.estimate.uncertainty;
-        L_int(:,idx) = sum(controller.actuator(controller),2);
+        L_ctr(:,idx) = sum(controller.actuators.actuate(controller),2);
         qy12 = estimator.sensors.sensor{1}.measurement;
         qy1(:,idx) = qy12{1};
         qy2(:,idx) = qy12{2};
         omy(:,idx) = estimator.sensors.sensor{2}.measurement;
-        L_ctr(:,idx) = controller.actuator(controller);
         q_c(:,idx) = controller.control_signal;
-        
-        %update environment
-        params = params.environment.update(t, x1, params);
         
         % update progress bar
         progressbar(t/te);
@@ -155,9 +162,12 @@ c_ang_er   = zeros(1,N_data);
 for i = 1:N_data
     r_truth(:,i)   = x(1:3,i);
     v_truth(:,i)   = x(4:6,i);
-    q_truth(:,i)   = quat_pq4(x(7:10,i));
-    q_est(:,i)     = quat_pq4(x_est(7:10,i));
-    dq_c(:,i)      = quat_pq4(quat_prod(q_c(:,i),quat_inv(q_truth(:,i))));
+%     q_truth(:,i)   = quat_pq4(x(7:10,i));
+%     q_est(:,i)     = quat_pq4(x_est(7:10,i));
+%     dq_c(:,i)      = quat_pq4(quat_prod(q_c(:,i),quat_inv(q_truth(:,i))));
+    q_truth(:,i)   = x(7:10,i);
+    q_est(:,i)     = x_est(7:10,i);
+    dq_c(:,i)      = quat_prod(q_c(:,i),quat_inv(q_truth(:,i)));
     ea_truth(:,i)  = quat2ea(q_truth(:,i));
     ea_est(:,i)    = quat2ea(q_est(:,i));
     om_truth(:,i)  = x(11:13,i);
@@ -270,14 +280,27 @@ hold off
 figure('Name','Control Torques')
 hold on
 title('Control Torques')
-plot(tv_data,L_int(1,:),'r-','DisplayName','Roll axis');
-plot(tv_data,L_int(2,:),'g-','DisplayName','Pitch axis');
-plot(tv_data,L_int(3,:),'b-','DisplayName','Yaw axis');
+plot(tv_data,L_ctr(1,:),'r-','DisplayName','Roll axis');
+plot(tv_data,L_ctr(2,:),'g-','DisplayName','Pitch axis');
+plot(tv_data,L_ctr(3,:),'b-','DisplayName','Yaw axis');
 legend('Location','northeast')
 grid on
 set(gca,'Color',[0.9; 0.9; 0.9]);
 xlabel('Time (h)')
 ylabel('Torque (N*m)')
+hold off
+
+figure('Name','Wheel Momentum')
+hold on
+title('Wheel Momentum')
+plot(tv_data,x(14,:),'r-','DisplayName','Roll axis');
+plot(tv_data,x(15,:),'g-','DisplayName','Pitch axis');
+plot(tv_data,x(16,:),'b-','DisplayName','Yaw axis');
+legend('Location','northeast')
+grid on
+set(gca,'Color',[0.9; 0.9; 0.9]);
+xlabel('Time (h)')
+ylabel('Angular Momentum (N*m*s)')
 hold off
 
 figure('Name','Roll Estimate Error')
@@ -400,6 +423,7 @@ figure('Name','Bias 1 Error')
 hold on
 title('Bias 1 Error')
 plot(tv_data,(beta_truth(1,:) - beta_est(1,:))*3600*180/pi)
+plot(tv_data,zeros(1,N_data),'k')
 % sigma = permute(P(4,4,:).^0.5*180/pi*3600,[1 3 2]);
 % plot(tv,3*sigma.*ones(1,N),'--')
 % plot(tv,-3*sigma.*ones(1,N),'--')
@@ -414,6 +438,7 @@ figure('Name','Bias 2 Error')
 hold on
 title('Bias 2 Error')
 plot(tv_data,(beta_truth(2,:) - beta_est(2,:))*3600*180/pi)
+plot(tv_data,zeros(1,N_data),'k')
 % sigma = permute(P(5,5,:).^0.5*180/pi*3600,[1 3 2]);
 % plot(tv,3*sigma.*ones(1,N),'--')
 % plot(tv,-3*sigma.*ones(1,N),'--')
@@ -428,6 +453,7 @@ figure('Name','Bias 3 Error')
 hold on
 title('Bias 3 Error')
 plot(tv_data,(beta_truth(3,:) - beta_est(3,:))*3600*180/pi)
+plot(tv_data,zeros(1,N_data),'k')
 % sigma = permute(P(6,6,:).^0.5*180/pi*3600,[1 3 2]);
 % plot(tv,3*sigma.*ones(1,N),'--')
 % plot(tv,-3*sigma.*ones(1,N),'--')
