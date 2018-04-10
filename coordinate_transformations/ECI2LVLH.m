@@ -32,6 +32,6 @@ o2 = -h/norm(h);
 o1 = cross(o2,o3);
 
 % CTM from ECI to LVLH
-T = [o1, o2, o3];
+T = [o1, o2, o3]';
 
 end

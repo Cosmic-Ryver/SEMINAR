@@ -12,27 +12,28 @@ classdef attitude_simulation < handle
         function sim = attitude_simulation( simulation_param_script, ...
             orbital_param_script, physical_param_script, ...
             environment_param_script, physics_engine_script, ...
-            estimator_script, controller_script )
+            controller_script )
         
             sim.params = param_container(sim, simulation_param_script, ...
                 environment_param_script, physical_param_script, ...
                 orbital_param_script);
-
             sim.physics_engine = physics_engine(sim, physics_engine_script);
 %             sim.estimator      = load_parameters(estimator_script,'estimator');
-            sim.estimator = estimator(sim);
             sim.controller     = load_parameters(controller_script,'controller');
             
             % Initiallize state
             sim.initialState(1:3)        = sim.params.orbital.r;
             sim.initialState(4:6)        = sim.params.orbital.v;
-            sim.initialState(7:10)       = sim.estimator.truth.state(7:10);
-            sim.initialState(11:13)      = sim.estimator.truth.state(11:13);
+            sim.initialState(7:10)       = sim.params.orbital.q;
+            sim.initialState(11:13)      = sim.params.orbital.om;
             for i = 1:size(sim.controller.actuators.rwheels.initial_momentum,2)
                 sim.initialState((14 + (i-1)*3):(13 + i*3)) = ...
                     sim.controller.actuators.rwheels.initial_momentum(:,i);
             end
             sim.initialState = sim.initialState';
+            
+            % Initiallize estimator
+            sim.estimator      = estimator(sim);
             
             % update environmental conditions
             sim.params.environment.update(0,sim.initialState,sim.params);
@@ -51,7 +52,9 @@ classdef attitude_simulation < handle
                 @(t,x,flags)sim.odeOutputFcn(t,x,flags));
         end
         function setControlSignal(obj,q_c,om_c,om_dot_c)
-            
+            obj.controller.control_signal.q_c = q_c;
+            obj.controller.control_signal.om_c = om_c;
+            obj.controller.control_signal.om_dot_c = om_dot_c;
         end
         function plotDataStore(obj)
             figure('Name','Orbit')
@@ -191,7 +194,7 @@ classdef attitude_simulation < handle
             figure('Name','Roll Estimate Error')
             hold on
             title('Roll Estimate Error')
-            plot(obj.data_store.tv,(obj.data_store.ea_truth(1,:) - obj.data_store.ea_est(1,:))*1e6)
+            plot(obj.data_store.tv,2*obj.data_store.dq_est(1,:)*1e6)
             plot(obj.data_store.tv,zeros(1,obj.params.simulation.N_data),'k')
             % sigma = permute(P(1,1,:).^0.5*1e6,[1 3 2]);
             % plot(tv,3*sigma.*ones(1,N),'--')
@@ -206,7 +209,7 @@ classdef attitude_simulation < handle
             figure('Name','Pitch Estimate Error')
             hold on
             title('Pitch Estimate Error')
-            plot(obj.data_store.tv,(obj.data_store.ea_truth(2,:) - obj.data_store.ea_est(2,:))*1e6)
+            plot(obj.data_store.tv,2*obj.data_store.dq_est(2,:)*1e6)
             plot(obj.data_store.tv,zeros(1,obj.params.simulation.N_data),'k')
             % sigma = permute(P(2,2,:).^0.5*1e6,[1 3 2]);
             % plot(tv,3*sigma.*ones(1,N),'--')
@@ -221,7 +224,7 @@ classdef attitude_simulation < handle
             figure('Name','Yaw Estimate Error')
             hold on
             title('Yaw Estimate Error')
-            plot(obj.data_store.tv,(obj.data_store.ea_truth(3,:) - obj.data_store.ea_est(3,:))*1e6)
+            plot(obj.data_store.tv,2*obj.data_store.dq_est(3,:)*1e6)
             plot(obj.data_store.tv,zeros(1,obj.params.simulation.N_data),'k')
             % sigma = permute(P(3,3,:).^0.5*1e6,[1 3 2]);
             % plot(tv,3*sigma.*ones(1,N),'--')
@@ -373,10 +376,11 @@ classdef attitude_simulation < handle
             obj.data_store.q_truth    = NaN(4,N_data);
             obj.data_store.q_est      = NaN(4,N_data);
             obj.data_store.dq_c       = NaN(4,N_data);
+            obj.data_store.dq_est     = NaN(4,N_data);
             obj.data_store.om_truth   = NaN(3,N_data);
             obj.data_store.om_est     = NaN(3,N_data);
-            obj.data_store.ea_truth   = NaN(3,N_data);
-            obj.data_store.ea_est     = NaN(3,N_data);
+%             obj.data_store.ea_truth   = NaN(3,N_data);
+%             obj.data_store.ea_est     = NaN(3,N_data);
             obj.data_store.est_ang_er = NaN(1,N_data);
             obj.data_store.c_ang_er   = NaN(1,N_data);
         end
@@ -465,8 +469,10 @@ classdef attitude_simulation < handle
             obj.data_store.q_est(:,i)      = obj.estimator.estimate.state(7:10);
             obj.data_store.dq_c(:,i)       = quat_prod(obj.data_store.q_c(:,i),...
                                                 quat_inv(obj.data_store.q_truth(:,i)));
-            obj.data_store.ea_truth(:,i)   = quat2ea(obj.data_store.q_truth(:,i));
-            obj.data_store.ea_est(:,i)     = quat2ea(obj.data_store.q_est(:,i));
+            obj.data_store.dq_est(:,i)     = quat_prod(obj.data_store.q_est(:,i),...
+                                                quat_inv(obj.data_store.q_truth(:,i)));
+%             obj.data_store.ea_truth(:,i)   = quat2ea(obj.data_store.q_truth(:,i));
+%             obj.data_store.ea_est(:,i)     = quat2ea(obj.data_store.q_est(:,i));
             obj.data_store.om_truth(:,i)   = x(11:13);
             obj.data_store.om_est(:,i)     = obj.estimator.estimate.state(11:13);
             A_truth                        = quat2CTM(obj.data_store.q_truth(:,i));

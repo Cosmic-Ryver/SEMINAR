@@ -40,6 +40,8 @@ switch param_type
         params.true_anom = true_anom;
         params.r         = r;
         params.v         = v;
+        params.q         = q;
+        params.om        = om;
     case 'environment'
         run(param_script)
         params.muE              = muE;

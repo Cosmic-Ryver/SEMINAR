@@ -17,5 +17,9 @@ classdef param_container < sim_component
             obj.orbital = orbital_params(aOwningSimHandle,aOrbitalParamScript);
         end
     end
+    
+    methods (Static)
+        
+    end
 end
 

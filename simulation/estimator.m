@@ -13,19 +13,16 @@ classdef estimator < sim_component
 
             obj.pOwningSimHandle = aOwningSimHandle;
             
+            initialState = obj.pOwningSimHandle.initialState;
+            
             %%%%%%%%%%%
             % Initial conditions
 
             % preallocate
             obj.estimate.state = zeros(13,1);
-            obj.truth.state    = zeros(13,1);
-
-            % initial attitude estimate (rad)
-            ea_est_0   = [pi/4;pi/4;pi/4];
-
-            % initial attitude estimate
-            q_est_0 = ea2quat(ea_est_0);
-            obj.estimate.state(7:10) = q_est_0; 
+            
+            % initiallize truth
+            obj.truth.state = initialState;
 
             % initial gyro bias estimate (rad/s)
             beta_est_0 = [0.1/3600; 0.1/3600; 0.1/3600] * pi/180;
@@ -47,13 +44,10 @@ classdef estimator < sim_component
             dv_0            = (diag(P_dv_0).^0.5).*randn(3,1);
 
             % initial attitude (error x estimate; normalized)
-            q_truth_0    = q_est_0 + quat_prod([dv_0/2;0],q_est_0);
-            q_truth_0    = q_truth_0/norm(q_truth_0);
-            obj.truth.state(7:10) = q_truth_0;
-
-            % initial angular rates
-            om_truth_0 = pi/180*[0.1; 0.1; 0.1];
-            obj.truth.state(11:13) = om_truth_0;
+            q_truth_0  = initialState(7:10);
+            q_est_0    = q_truth_0 + quat_prod([dv_0/2;0],q_truth_0);
+            q_est_0    = q_est_0/norm(q_est_0);
+            obj.estimate.state(7:10) = q_est_0;
 
             % initial gyro bias (error + estimate)
             obj.truth.error = beta_est_0 + diag(P_dbeta_0).^0.5.*randn(3,1);
@@ -179,6 +173,8 @@ classdef estimator < sim_component
 
         end
 
+        
+        
         function measure(estimator, t)
 
             N = length(estimator.sensors.sensor);

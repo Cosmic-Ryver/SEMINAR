@@ -1,4 +1,4 @@
-function [ Strs ] = std_physics_engine()
+function [ Strs ] = robust_physics_engine()
 
 Strs = {{'solar_rad_pressure';
          'aero_perturbations';
