@@ -40,13 +40,17 @@ switch param_type
         params.true_anom = true_anom;
         params.r         = r;
         params.v         = v;
+        params.q         = q;
+        params.om        = om;
     case 'environment'
         run(param_script)
         params.muE              = muE;
         params.muMoon           = muMoon;
         params.rE               = rE;
+        params.AU               = AU;
         params.update           = update;
-        params.update_frequency = update_frequency;
+        params.updateTime       = updateTime;
+        params.updateInterval   = updateInterval;
     case 'simulation'
         run(param_script)
         params.ti      = ti;
@@ -57,6 +61,8 @@ switch param_type
         params.jd0     = jd0;
         params.odeOpts = odeOpts;
     case 'kin_dyn_engine'
+        params = feval(param_script);
+    case 'physics_engine'
         params = feval(param_script);
     case 'estimator'
         params = feval(param_script);

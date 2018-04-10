@@ -1,4 +1,4 @@
-function [ Ps, rhat_sun_rel ] = solar_rad_press( r_ECI, jd )
+function [ Ps, rhat_sun_rel ] = solar_rad_press( r_ECI, jd, varargin )
 % SOLAR_RAD_PRESS calculate solar radiation pressure for an earth orbiting
 %   satellite
 
@@ -9,7 +9,11 @@ Fs = 1362;         % solar constant (W/m^2)
 c  = 299792458;    % speed of light in a vacuum (m/s)
 
 % sun position vector
-r_sun = get_r_sun(jd, AU);
+if nargin == 2
+    r_sun = get_r_sun(jd, AU);
+else
+    r_sun = varargin{1};
+end
 
 % position of the sun relative to the input position
 r_sun_rel = r_sun - r_ECI;
