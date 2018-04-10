@@ -40,6 +40,9 @@ estimator.truth.state(11:13) = om_truth_0;
 % initial gyro bias (error + estimate)
 estimator.truth.error = beta_est_0 + diag(P_dbeta_0).^0.5.*randn(3,1);
 
+% initial time
+estimator.truth.t = 0;
+
 %% Sensor parameters
 
 % timing
@@ -49,15 +52,17 @@ estimator.sensors.base_frequency = min(frequencies);
 
 % star trackers 1 & 2
 idx = 1;
-estimator.sensors.sensor{idx}.rate = rates(idx);
-estimator.sensors.sensor{idx}.frequency = frequencies(idx);
+estimator.sensors.sensor{idx}.rate           = rates(idx);
+estimator.sensors.sensor{idx}.updateInterval = frequencies(idx);
+estimator.sensors.sensor{idx}.updateTime     = 0;
 estimator.sensors.sensor{idx}.measure = @(estimator) ...
     {estimator.truth.state(7:10), estimator.truth.state(7:10)};
 
 % gyro
 idx = 2;
-estimator.sensors.sensor{idx}.rate = rates(idx);
-estimator.sensors.sensor{idx}.frequency = frequencies(idx);
+estimator.sensors.sensor{idx}.rate           = rates(idx);
+estimator.sensors.sensor{idx}.updateInterval = frequencies(idx);
+estimator.sensors.sensor{idx}.updateTime     = 0;
 estimator.sensors.sensor{idx}.measure = @(estimator) ...
     estimator.truth.state(11:13);
 
@@ -66,8 +71,8 @@ estimator.sensors.measure = @(estimator, t) measure(estimator, t);
 
 %% Truth update and propagation
 
-estimator.truth.update = @(estimator, x_tru) ...
-    update_truth(estimator, x_tru, 0);
+estimator.truth.update = @(estimator, x_tru, t) ...
+    update_truth(estimator, x_tru, t, 0);
 
 estimator.estimate.propagate = @(estimator) estimator;
 
@@ -76,8 +81,14 @@ estimator.estimate.propagate = @(estimator) estimator;
 % unique updator for each sensor
 estimator.estimate.updaters{1}.update = @(estimator) ...
     filter_update(estimator);
+estimator.estimate.updaters{1}.updateTime = 0;
+estimator.estimate.updaters{1}.updateInterval = ...
+    estimator.sensors.sensor{1}.updateInterval;
 estimator.estimate.updaters{2}.update = @(estimator) ...
     gyro_update(estimator);
+estimator.estimate.updaters{2}.updateTime = 0;
+estimator.estimate.updaters{2}.updateInterval = ...
+    estimator.sensors.sensor{2}.updateInterval;
 
 % all
 estimator.estimate.update = @(estimator,t) ...
@@ -95,19 +106,23 @@ function [ estimator ] = measure(estimator, t)
 
 N = length(estimator.sensors.sensor);
 for i = 1:N
-    if rem(t,estimator.sensors.sensor{i}.frequency) == 0
+    if t >= estimator.sensors.sensor{i}.updateTime
         estimator.sensors.sensor{i}.measurement = ...
             estimator.sensors.sensor{i}.measure(estimator);
+        estimator.sensors.sensor{i}.updataTime = ...
+            estimator.sensors.sensor{i}.updateTime + ...
+            estimator.sensors.sensor{i}.updateInterval;
     end
 end
 
 end
 
-function [ estimator ] = update_truth(estimator, x_tru, sigma_u)
+function [ estimator ] = update_truth(estimator, x_tru, t, sigma_u)
 
-base_frequency = estimator.sensors.base_frequency;
+dt = t - estimator.truth.t;
 estimator.truth.error = estimator.truth.error + ...
-    sigma_u*base_frequency^0.5*randn(3,1);
+    sigma_u*dt^0.5*randn(3,1);
+estimator.truth.t = t;
 estimator.truth.state = x_tru;
 
 end
@@ -131,8 +146,11 @@ function [estimator] = update_estimate(estimator, t)
 
 N = length(estimator.sensors.sensor);
 for i = 1:N
-    if rem(t,estimator.sensors.sensor{i}.frequency) == 0
+    if t >= estimator.estimate.updaters{i}.updateTime
         estimator = estimator.estimate.updaters{i}.update(estimator);
+        estimator.estimate.updaters{i}.updateTime = ...
+            estimator.estimate.updaters{i}.updateTime + ...
+            estimator.estimate.updaters{i}.updateInterval;
     end
 end
 

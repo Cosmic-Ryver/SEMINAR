@@ -57,4 +57,6 @@ Vec_w = Wij*Vec_b;
 % Apply wheel magnitudes to body pointing directions
 Vecs_b = repmat(Vec_w',3,1).*W;
 
+
+
 end

@@ -1,6 +1,6 @@
 function [ controller ] = test_controller()
 
-controller.actuators.actuate = @(controller) ...
+controller.actuators.actuate = @(controller,x) ...
     controller.actuators.rwheels.actuate(controller);
 controller.actuators.rwheels.config = eye(3);
 controller.actuators.rwheels.initial_momentum = zeros(3);
