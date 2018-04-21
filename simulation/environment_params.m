@@ -16,10 +16,17 @@ classdef environment_params < sim_component
     end
     
     methods
+        
         function obj = environment_params(aOwningSimHandle,...
                 aEnvironmentParamsScript)
+            
+            % set sim handle
             obj.pOwningSimHandle = aOwningSimHandle;
+            
+            % load parameters
             struct = load_parameters(aEnvironmentParamsScript,'environment');
+            
+            % save parameters
             obj.muE = struct.muE;
             obj.muMoon = struct.muMoon;
             obj.rE = struct.rE;
@@ -27,8 +34,13 @@ classdef environment_params < sim_component
             obj.updateInterval = struct.updateInterval;
             obj.updateTime = struct.updateTime;
         end
-        function update(obj, t, x, params)
-            jd = t/86400 + params.simulation.jd0;
+        
+        function update(obj, t, x)
+            
+            % get jd
+            jd = t/86400 + obj.pOwningSimHandle.params.simulation.jd0;
+            
+            % update environmental conditions
             obj.b = IGRF(x(1:3), jd, 13,'ECI');
             obj.rho = exponential_atm(x(1:3));
             obj.r_sun = get_r_sun(jd, obj.AU);

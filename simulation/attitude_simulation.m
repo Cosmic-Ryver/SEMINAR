@@ -9,18 +9,24 @@ classdef attitude_simulation < handle
         data_store
         pStepSize
     end
+    
     methods
         function sim = attitude_simulation( simulation_param_script, ...
             orbital_param_script, physical_param_script, ...
             environment_param_script, physics_engine_script )
         
+            % fundamental parameters
             sim.params = param_container(sim, simulation_param_script, ...
                 environment_param_script, physical_param_script, ...
                 orbital_param_script);
+            
+            % controller
             sim.controller     = controller(sim);
+            
+            % physics engine
             sim.physics_engine = physics_engine(sim, physics_engine_script);
             
-            % Initiallize state
+            % Initial state
             sim.initialState(1:3)        = sim.params.orbital.r;
             sim.initialState(4:6)        = sim.params.orbital.v;
             sim.initialState(7:10)       = sim.params.orbital.q;
@@ -31,26 +37,29 @@ classdef attitude_simulation < handle
             end
             sim.initialState = sim.initialState';
             
-            % Initiallize estimator
+            % estimator
             sim.estimator      = estimator(sim);
             
             % update environmental conditions
-            sim.params.environment.update(0,sim.initialState,sim.params);
+            sim.params.environment.update(0,sim.initialState);
             
 %             % update controller
 %             sim.controller = sim.controller.update(sim.controller,...
 %                 sim.estimator,sim.params);
             
+
             initializeDataStore(sim);
             
             sim.pStepSize = min([sim.params.environment.updateInterval,...
                 sim.estimator.updateInterval,sim.data_store.updateInterval]);
         end
+        
         function setControlSignal(obj,q_c,om_c,om_dot_c)
             obj.controller.control_signal.q_c = q_c;
             obj.controller.control_signal.om_c = om_c;
             obj.controller.control_signal.om_dot_c = om_dot_c;
         end
+        
         function plotDataStore(obj)
             figure('Name','Orbit')
             hold on
@@ -381,6 +390,7 @@ classdef attitude_simulation < handle
             hold off
         end
     end
+    
     methods (Access = private)
         function initializeDataStore(obj)
             N_data = obj.params.simulation.N_data;
@@ -410,6 +420,7 @@ classdef attitude_simulation < handle
             obj.data_store.est_ang_er = NaN(1,N_data);
             obj.data_store.c_ang_er   = NaN(1,N_data);
         end
+        
         function status = checkForEnvironmentUpdate(obj,t)
             if t >= obj.params.environment.updateTime
                 status = true;
@@ -417,6 +428,7 @@ classdef attitude_simulation < handle
                 status = false;
             end
         end
+        
         function status = checkForEstimatorUpdate(obj,t)
             if t >= obj.estimator.updateTime
                 status = true;
@@ -424,6 +436,7 @@ classdef attitude_simulation < handle
                 status = false;
             end
         end
+        
         function status = checkForStoreDataPoint(obj,t)
             if t >= obj.data_store.updateTime
                 status = true;
@@ -431,15 +444,17 @@ classdef attitude_simulation < handle
                 status = false;
             end
         end
+        
         function executeEnvironmentUpdate(obj,t,x)
             % update environmental conditions
-            obj.params.environment.update(t,x,obj.params);
+            obj.params.environment.update(t,x);
             
             %update update time
             obj.params.environment.updateTime = ...
                 obj.params.environment.updateTime + ...
                 obj.params.environment.updateInterval;
         end
+        
         function executeEstimatorUpdate(obj,t,x)
             
             % update estimator truth
@@ -463,6 +478,7 @@ classdef attitude_simulation < handle
             obj.estimator.updateTime = obj.estimator.updateTime + ...
                 obj.estimator.updateInterval;
         end
+        
         function executeStoreDataPoint(obj,t,x)
             % get index to store data at
             i = obj.data_store.idx;
@@ -471,8 +487,12 @@ classdef attitude_simulation < handle
             obj.data_store.beta_truth(:,i) = obj.estimator.truth.error;
             obj.data_store.beta_est(:,i)   = obj.estimator.estimate.error;
             obj.data_store.P(:,:,i)        = obj.estimator.estimate.uncertainty;
+            
+            % torque
             L                              = obj.controller.actuators.actuate();
             obj.data_store.L_ctr(:,i)      = sum(L,2);
+            
+            % momentum
             momentum                       = reshape(x(14:end),3,[]);
             for j = 1:size(momentum,2)
                 obj.data_store.WheelMomentum(j,i)   = ...
@@ -482,10 +502,13 @@ classdef attitude_simulation < handle
                     norm(L(:,j))*sign(dot(L(:,j),...
                     obj.controller.actuators.rwheels.config(:,j)));
             end
+            
+            % measurements
             qy12                           = obj.estimator.sensors.sensor{1}.measurement;
             obj.data_store.qy1(:,i)        = qy12{1};
             obj.data_store.qy2(:,i)        = qy12{2};
             obj.data_store.omy(:,i)        = obj.estimator.sensors.sensor{2}.measurement;
+            
             obj.data_store.q_c(:,i)        = obj.controller.control_signal.q_c;
             obj.data_store.tv(i)           = t/3600;
             obj.data_store.r_truth(:,i)    = x(1:3);
@@ -496,10 +519,10 @@ classdef attitude_simulation < handle
                                                 quat_inv(obj.data_store.q_c(:,i)));
             obj.data_store.dq_est(:,i)     = quat_prod(quat_inv(obj.data_store.q_truth(:,i)),...
                                                 obj.data_store.q_est(:,i));
-%             obj.data_store.ea_truth(:,i)   = quat2ea(obj.data_store.q_truth(:,i));
-%             obj.data_store.ea_est(:,i)     = quat2ea(obj.data_store.q_est(:,i));
             obj.data_store.om_truth(:,i)   = x(11:13);
             obj.data_store.om_est(:,i)     = obj.estimator.estimate.state(11:13);
+            
+            % pointing errors
             A_truth                        = quat2CTM(obj.data_store.q_truth(:,i));
             A_c                            = quat2CTM(obj.data_store.q_c(:,i));
             A_est                          = quat2CTM(obj.data_store.q_est(:,i));
@@ -528,58 +551,79 @@ classdef attitude_simulation < handle
     methods
         function executeMulti(sim)
             
-            ti = sim.params.simulation.ti;
-            dt = sim.pStepSize;
-            te = sim.params.simulation.te;
-            x = sim.initialState;
-            odeFcn = sim.physics_engine.pOdeFcn;
+            % ode inputs
+            ti      = sim.params.simulation.ti;
+            dt      = sim.pStepSize;
+            te      = sim.params.simulation.te;
+            x       = sim.initialState;
+            odeFcn  = sim.physics_engine.pOdeFcn;
             odeOpts = sim.params.simulation.odeOpts;
             
+            % initial update
             sim.odeOutputFcn(ti,x,'init');
             
+            % simulation loop
             for t = (ti + dt):dt:te
                 tspan = [t - dt, t];
                 [~, X] = ode45(odeFcn,tspan,x,odeOpts);
                 x = X(end,:)';
-                x(7:10) = x(7:10)/norm(x(7:10));
+                x(7:10) = x(7:10)/norm(x(7:10)); % normallize quaternion
                 sim.odeOutputFcn(t,x,[]);
             end
             
+            % clean up & plotting
             sim.odeOutputFcn([],[],'done');
+            
         end
+        
         function executeSingle(sim)
-            ti = sim.params.simulation.ti;
-            dt = sim.pStepSize;
-            te = sim.params.simulation.te;
-            x = sim.initialState;
-            odeFcn = sim.physics_engine.pOdeFcn;
+            
+            % ode inputs
+            ti      = sim.params.simulation.ti;
+            dt      = sim.pStepSize;
+            te      = sim.params.simulation.te;
+            x       = sim.initialState;
+            odeFcn  = sim.physics_engine.pOdeFcn;
             odeOpts = sim.params.simulation.odeOpts;
             
+            % update options
             odeOpts = odeset(odeOpts,'Refine',1,'MaxStep',dt*0.1,...
                 'OutputFcn',@sim.odeOutputFcn);
             
+            % single-integration simulation
             ode45(odeFcn,[ti, te],x,odeOpts);
         end
         
         function status = odeOutputFcn(sim,t,x,flag)
-            if isempty(flag)
+            
+            if isempty(flag) % normal update routine
+                
+                % environment update
                 if sim.checkForEnvironmentUpdate(t)
                     sim.executeEnvironmentUpdate(t,x);
                 end
+                
+                % estimate/controller update
                 if sim.checkForEstimatorUpdate(t)
                     sim.executeEstimatorUpdate(t,x);
                 end
+                
+                % data store update
                 if sim.checkForStoreDataPoint(t)
                     sim.executeStoreDataPoint(t,x);
                 end
-            elseif isequal(flag,'init')
-                sim.executeEnvironmentUpdate(t(1),x);
+                
+            elseif isequal(flag,'init') % initial update
                 sim.estimator.truth.t = t(1);
+                sim.executeEnvironmentUpdate(t(1),x);
                 sim.executeEstimatorUpdate(t(1),x);
                 sim.executeStoreDataPoint(t(1),x);
-            else % done
+                
+            else % closing update
                 sim.plotDataStore();
             end
+            
+            % status needed for ode solver
             status = 0;
         end
     end
