@@ -48,7 +48,6 @@ switch param_type
         params.muMoon           = muMoon;
         params.rE               = rE;
         params.AU               = AU;
-        params.update           = update;
         params.updateTime       = updateTime;
         params.updateInterval   = updateInterval;
     case 'simulation'
@@ -60,14 +59,9 @@ switch param_type
         params.N_data  = N_data;
         params.jd0     = jd0;
         params.odeOpts = odeOpts;
-    case 'kin_dyn_engine'
-        params = feval(param_script);
     case 'physics_engine'
-        params = feval(param_script);
-    case 'estimator'
-        params = feval(param_script);
-    case 'controller'
-        params = feval(param_script);
+        run(param_script)
+        params = Strs;
 end
 end
 

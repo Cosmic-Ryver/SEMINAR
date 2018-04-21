@@ -73,45 +73,49 @@ classdef estimator < sim_component
             R  = blkdiag(R1,R2);
 
             % Gyro rate standard deviation (based on SIRU-E from NG)
-            % sigma_v = 0.00005/3600*pi/180;
-            sigma_v = 10^0.5*10^-7;
+            sigma_v = 0.00005/3600*pi/180;
 
             % Gyro bias standard deviation (based on SIRU-E from NG)
-            % sigma_u = 0.0005/3600*pi/180;
-            sigma_u = 10^0.5*10^-10;
+            sigma_u = 0.0005/3600*pi/180;
 
             % timing
-            rates = [1, 4, 4]; % Hz
+            rates = [1, 4, 4, 4]; % Hz
             frequencies = rates.^-1; % s
             obj.sensors.base_frequency = min(frequencies);
-
-            % 
             
             % star trackers 1 & 2
             idx = 1;
             obj.sensors.sensor{idx}.rate = rates(idx);
             obj.sensors.sensor{idx}.updateInterval = frequencies(idx);
             obj.sensors.sensor{idx}.updateTime     = 0;
-            obj.sensors.sensor{idx}.measure = @(estimator) ...
-                { star_tracker(estimator.truth.state(7:10),R1), ...
-                  star_tracker(estimator.truth.state(7:10),R2) };
+            obj.sensors.sensor{idx}.measure = @(varargin) ...
+                { star_tracker(obj.truth.state(7:10),R1), ...
+                  star_tracker(obj.truth.state(7:10),R2) };
 
             % gyro
             idx = 2;
             obj.sensors.sensor{idx}.rate = rates(idx);
             obj.sensors.sensor{idx}.updateInterval = frequencies(idx);
             obj.sensors.sensor{idx}.updateTime     = 0;
-            obj.sensors.sensor{idx}.measure = @(estimator) ...
-                biased_gyro(estimator.truth.state(11:13),sigma_v, ...
-                estimator.truth.error);
+            obj.sensors.sensor{idx}.measure = @(varargin) ...
+                biased_gyro(obj.truth.state(11:13),sigma_v, ...
+                obj.truth.error);
             
             % clock
             idx = 3;
             obj.sensors.sensor{idx}.rate = rates(idx);
             obj.sensors.sensor{idx}.updateInterval = frequencies(idx);
             obj.sensors.sensor{idx}.updateTime     = 0;
-            obj.sensors.sensor{idx}.measure = @(estimator) ...
-                estimator.truth.t;
+            obj.sensors.sensor{idx}.measure = @(varargin) ...
+                obj.truth.t;
+            
+            % wheel momentum psuedo-sensor
+            idx = 4;
+            obj.sensors.sensor{idx}.rate           = rates(idx);
+            obj.sensors.sensor{idx}.updateInterval = frequencies(idx);
+            obj.sensors.sensor{idx}.updateTime     = 0;
+            obj.sensors.sensor{idx}.measure        = @(varargin) ...
+                obj.truth.state(14:end);
 
             % all
             obj.sensors.measure = @(t) obj.measure(t);
@@ -132,27 +136,43 @@ classdef estimator < sim_component
                 obj.update_truth(x_tru, t, sigma_u);
 
             obj.estimate.propagate = @(t) ...
-                obj.propagate_estimate(t,F,G,Q);
+                obj.propagate_estimate(t,F,G,Q,2);
 
             %%%%%%%%%%%%%
             % Measurement update
-
             % unique updator for each sensor
-            obj.estimate.updaters{1}.update = @(estimator) ...
-                filter_update(estimator, 1, R, h, H);
-            obj.estimate.updaters{1}.updateTime = 0;
-            obj.estimate.updaters{1}.updateInterval = ...
-                obj.sensors.sensor{1}.updateInterval;
-            obj.estimate.updaters{2}.update = @(estimator) ...
-                gyro_update(estimator, 2);
-            obj.estimate.updaters{2}.updateTime = 0;
-            obj.estimate.updaters{2}.updateInterval = ...
-                obj.sensors.sensor{2}.updateInterval;
-            obj.estimate.updaters{3}.update = @(estimator) ...
-                clock_update(estimator, 3);
-            obj.estimate.updaters{3}.updateTime = 0;
-            obj.estimate.updaters{3}.updateInterval = ...
-                obj.sensors.sensor{3}.updateInterval;
+            
+            % attitude & bias
+            idx = 1;
+            obj.estimate.updaters{idx}.update = @(varargin) ...
+                obj.filter_update(1, R, h, H);
+            obj.estimate.updaters{idx}.updateTime = 0;
+            obj.estimate.updaters{idx}.updateInterval = ...
+                obj.sensors.sensor{idx}.updateInterval;
+            
+            % angular rate
+            idx = 2;
+            obj.estimate.updaters{idx}.update = @(varargin) ...
+                obj.gyro_update(idx);
+            obj.estimate.updaters{idx}.updateTime = 0;
+            obj.estimate.updaters{idx}.updateInterval = ...
+                obj.sensors.sensor{idx}.updateInterval;
+            
+            % time
+            idx = 3;
+            obj.estimate.updaters{idx}.update = @(varargin) ...
+                obj.clock_update(idx);
+            obj.estimate.updaters{idx}.updateTime = 0;
+            obj.estimate.updaters{idx}.updateInterval = ...
+                obj.sensors.sensor{idx}.updateInterval;
+            
+            % wheel momentum
+            idx = 4;
+            obj.estimate.updaters{idx}.update = @(varargin) ...
+                obj.wheel_momentum_update(idx);
+            obj.estimate.updaters{idx}.updateTime = 0;
+            obj.estimate.updaters{idx}.updateInterval = ...
+                obj.sensors.sensor{idx}.updateInterval;
 
             % all
             obj.estimate.update = @(t) ...
@@ -197,27 +217,33 @@ classdef estimator < sim_component
             estimator.truth.state = x_tru;
         end
 
-        function propagate_estimate(estimator,t,F,G,Q)
+        function propagate_estimate(estimator,t,F,G,Q,gyro_idx)
             tspan  = [estimator.estimate.t t];
             q_est  = estimator.estimate.state(7:10);
             om_est = estimator.estimate.state(11:13);
+            om_new = estimator.sensors.sensor{gyro_idx}.measurement - ...
+                estimator.estimate.error;
             dim    = length(G);
             Pr     = @(p) reshape(p,dim,dim);
             P      = estimator.estimate.uncertainty;
             Xn     = cell(2,1);
+            om_interp_fnc = @(t) om_est + (om_new - om_est)*...
+                (t - tspan(1))/diff(tspan);
 
             for i = 1:2
                 if i == 1
                     opts  = odeset('RelTol',1e-8,'AbsTol',1e-10);
-                    [ ~, X ] = ode45(@(t, x, om) 0.5*quat_prod([om; 0],x/norm(x)), ...
-                        tspan, q_est, opts, om_est);
+                    [ ~, X ] = ode45(@(t, x) ...
+                        0.5*quat_prod([om_interp_fnc(t); 0],x/norm(x)), ...
+                        tspan, q_est, opts);
                     Xn{i} = X;
                 else
                     rP = @(P) reshape(P,dim^2,1);
                     P_est = rP(P);
                     opts   = odeset('RelTol',1e-10,'AbsTol',1e-13);
-                    [~,X] = ode45(@(t,x,om) rP(F(om)*Pr(x) + Pr(x)*F(om)' + G*Q*G'),...
-                            tspan,P_est,opts,om_est);
+                    [~,X] = ode45(@(t,x) rP(F(om_interp_fnc(t))*Pr(x) +...
+                        Pr(x)*F(om_interp_fnc(t))' + G*Q*G'),...
+                            tspan,P_est,opts);
                     Xn{i} = X;
                 end
             end
@@ -226,15 +252,20 @@ classdef estimator < sim_component
             estimator.estimate.uncertainty = Pr(Xn{2}(end,:)');
         end
 
-        function clock_update(estimator, sensorIdx)
-                estimator.estimate.t = ...
-                estimator.sensors.sensor{sensorIdx}.measurement;
-        end
-
         function gyro_update(estimator, sensorIdx)
             estimator.estimate.state(11:13) = ...
                 estimator.sensors.sensor{sensorIdx}.measurement - ...
                 estimator.estimate.error;
+        end
+
+        function clock_update(estimator, sensorIdx)
+                estimator.estimate.t = ...
+                estimator.sensors.sensor{sensorIdx}.measurement;
+        end
+        
+        function wheel_momentum_update(estimator, sensorIdx)
+                estimator.estimate.Hw = ...
+                estimator.sensors.sensor{sensorIdx}.measurement;
         end
 
         function filter_update(estimator, sensorIdx, R, h, H)

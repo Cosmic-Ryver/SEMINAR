@@ -1,5 +1,3 @@
-function [ Strs ] = robust_physics_engine()
-
 Strs = {{'solar_rad_pressure';
          'aero_perturbations';
          'magnetic_perturbation';
@@ -7,5 +5,3 @@ Strs = {{'solar_rad_pressure';
         {'two_body_dynamics';
          'lunar_third_body_perturbation';
          'zonal_harmonics_perturbation'}};
-
-end
