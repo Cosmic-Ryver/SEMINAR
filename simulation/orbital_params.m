@@ -9,6 +9,7 @@ classdef orbital_params < sim_component
         true_anom(1,1) double
         r(3,1) double
         v(3,1) double
+        q_ANT2B(4,1) double
         q(4,1) double
         om(3,1) double
     end
@@ -25,6 +26,7 @@ classdef orbital_params < sim_component
             obj.true_anom = struct.true_anom;
             obj.r = struct.r;
             obj.v = struct.v;
+            obj.q_ANT2B = struct.q_ANT2B;
             obj.q = struct.q;
             obj.om = struct.om;
         end

@@ -1,4 +1,4 @@
-function [ T ] = ECI2LVLH( jd_ut1 )
+function [ T ] = MOD2ECI( jd_ut1 )
 % MOD2ECI compute the CTM for the transformation from the MOD frame to the
 %   ECI frame
 %

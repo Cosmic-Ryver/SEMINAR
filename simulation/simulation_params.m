@@ -7,6 +7,8 @@ classdef simulation_params < sim_component
         tv_data double
         N_data(1,1) double
         jd0(1,1) double
+        q_c(4,1) double
+        command_mode(1,1) command_mode_enumeration
     end
     properties (Access = public)
         odeOpts
@@ -24,6 +26,8 @@ classdef simulation_params < sim_component
             obj.N_data = struct.N_data;
             obj.jd0 = struct.jd0;
             obj.odeOpts = struct.odeOpts;
+            obj.q_c = struct.q_c;
+            obj.command_mode = struct.command_mode;
         end
     end
 end

@@ -10,7 +10,7 @@ quat_ECI2B    = x(7:10);
 CTM_ECI2LVLH  = ECI2LVLH(x(1:3),x(4:6));
 quat_ECI2LVLH = CTM2quat(CTM_ECI2LVLH);
 quat_LVLH2ECI = quat_inv(quat_ECI2LVLH);
-quat_LVLH2B   = quat_prod(quat_LVLH2ECI,quat_ECI2B);
+quat_LVLH2B   = quat_prod(quat_ECI2B,quat_LVLH2ECI);
 ea            = quat2ea(quat_LVLH2B);
 
 % Calculate the gravity gradient torque

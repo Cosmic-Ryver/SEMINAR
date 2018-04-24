@@ -1,4 +1,4 @@
-classdef estimator < sim_component
+classdef calibration_estimator < sim_component
     
     properties
         estimate
@@ -9,8 +9,10 @@ classdef estimator < sim_component
     end
     methods
 
-        function obj = estimator(aOwningSimHandle)
+        function obj = calibration_estimator(aOwningSimHandle)
 
+            error('implementation not complete')
+            
             obj.pOwningSimHandle = aOwningSimHandle;
             
             initialState = obj.pOwningSimHandle.initialState;
@@ -27,6 +29,13 @@ classdef estimator < sim_component
             % initial gyro bias estimate (rad/s)
             beta_est_0 = [0.1/3600; 0.1/3600; 0.1/3600] * pi/180;
             obj.estimate.error = beta_est_0;
+            
+            % initial scale factor estimate
+            sf_est_0 = zeros(3,1);
+            obj.estimate.scale_factor = sf_est_0;
+            
+            % initial upper & lower misalignment
+            
 
             % initial time estimate
             t0 = obj.pOwningSimHandle.params.simulation.ti;

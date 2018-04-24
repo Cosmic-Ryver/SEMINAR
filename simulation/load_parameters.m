@@ -40,6 +40,7 @@ switch param_type
         params.true_anom = true_anom;
         params.r         = r;
         params.v         = v;
+        params.q_ANT2B   = q_ANT2B;
         params.q         = q;
         params.om        = om;
     case 'environment'
@@ -59,9 +60,17 @@ switch param_type
         params.N_data  = N_data;
         params.jd0     = jd0;
         params.odeOpts = odeOpts;
+        params.command_mode = command_mode;
+        params.q_c     = q_c;
     case 'physics_engine'
         run(param_script)
         params = Strs;
+    case 'controller'
+        run(param_script)
+        params.actuators      = actuators;
+        params.control_params = control_params;
+    otherwise
+        error('Bad params type string')
 end
 end
 

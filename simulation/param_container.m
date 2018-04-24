@@ -13,6 +13,7 @@ classdef param_container < sim_component
             obj.pOwningSimHandle = aOwningSimHandle;
             obj.simulation = simulation_params(aOwningSimHandle,aSimulationParamSctipt);
             obj.environment = environment_params(aOwningSimHandle,aEnvironmentParamScript);
+            obj.environment.updateTime = obj.simulation.ti;
             obj.physical = physical_params(aOwningSimHandle,aPhysicalParamScript);
             obj.orbital = orbital_params(aOwningSimHandle,aOrbitalParamScript);
         end

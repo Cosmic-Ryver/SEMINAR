@@ -1,4 +1,4 @@
-function [ T ] = GCI2ECEF( jd, varargin )
+function [ T ] = ECI2ECEF( jd, varargin )
 % ECI2ECEF calculate the CTM for transformations from the ECI frame to the 
 %   ECEF frame
 %
